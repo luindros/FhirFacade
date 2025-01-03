@@ -1,0 +1,4 @@
+com\luindros\ObservationProvider.class
+com\luindros\FhirServlet.class
+com\luindros\App.class
+com\luindros\PatientResourceProvider.class
