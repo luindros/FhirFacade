@@ -7,11 +7,11 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import java.sql.Connection;
+//import java.sql.Connection;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
+//import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Read;
@@ -19,18 +19,45 @@ import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 
+/**
+ * FHIR Resource Provider for Observations (Blood Pressure and Heart Rate)
+ * This class handles FHIR operations for Observation resources, specifically
+ * managing
+ * blood pressure and heart rate measurements stored in a SQL database.
+ * Each observation type has a unique suffix (-bp for blood pressure, -hr for
+ * heart rate)
+ */
 public class ObservationProvider implements IResourceProvider {
     private Connection connection;
 
+    /**
+     * Constructor that initializes the database connection
+     * 
+     * @param conn SQL database connection for storing/retrieving observations
+     */
+    public ObservationProvider(Connection conn) {
+        this.connection = conn;
+    }
+
+    /**
+     * Required by IResourceProvider. Indicates this provider handles Observation
+     * resources
+     * 
+     * @return Class object for Observation resource type
+     */
     @Override
     public Class<? extends IBaseResource> getResourceType() {
         return Observation.class;
     }
 
-    public ObservationProvider(Connection conn) {
-        this.connection = conn;
-    }
-
+    /**
+     * Converts blood pressure database records into FHIR Observation resources
+     * Creates a compound observation with both systolic and diastolic components
+     * 
+     * @param result SQL ResultSet containing blood pressure data
+     * @return FHIR Observation resource with blood pressure components
+     * @throws SQLException If there's an error reading from the ResultSet
+     */
     private Observation convertBloodPressureToObservation(ResultSet result) throws SQLException {
         Observation observation = new Observation();
         observation.setId(result.getString("id") + "-bp");
@@ -65,6 +92,13 @@ public class ObservationProvider implements IResourceProvider {
         return observation;
     }
 
+    /**
+     * Converts heart rate database records into FHIR Observation resources
+     * 
+     * @param result SQL ResultSet containing heart rate data
+     * @return FHIR Observation resource with heart rate measurement
+     * @throws SQLException If there's an error reading from the ResultSet
+     */
     private Observation convertHeartRateToObservation(ResultSet result) throws SQLException {
         Observation observation = new Observation();
         observation.setId(result.getString("id") + "-hr");
@@ -80,6 +114,13 @@ public class ObservationProvider implements IResourceProvider {
         return observation;
     }
 
+    /**
+     * Handles FHIR search operation to retrieve all observations
+     * Combines both blood pressure and heart rate observations
+     * 
+     * @return List of all Observation resources from both tables
+     * @throws SQLException If there's an error accessing the database
+     */
     @Search
     public List<Observation> getAllObservations() throws SQLException {
         Statement statement = connection.createStatement();
@@ -101,6 +142,15 @@ public class ObservationProvider implements IResourceProvider {
         return observations;
     }
 
+    /**
+     * Handles FHIR read operation for specific observations
+     * Uses ID suffix to determine observation type (-bp or -hr)
+     * 
+     * @param id The ID of the observation to retrieve (format: number-type)
+     * @return The requested Observation resource
+     * @throws SQLException              If there's an error accessing the database
+     * @throws ResourceNotFoundException If no observation found with given ID
+     */
     @Read
     public Observation getObservation(@IdParam IdType id) throws SQLException {
         String[] parts = id.getIdPart().split("-");
